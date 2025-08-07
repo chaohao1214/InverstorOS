@@ -1,2 +1,3 @@
-# InverstorOS
-MVP help users invest
+# InvestorOS
+
+An AI-powered investment assistant built with React and Node.js.
