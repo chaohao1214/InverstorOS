@@ -5,9 +5,9 @@ export default function Composer({ onSend, loading }) {
   const [text, setText] = useState("");
 
   const handleSend = () => {
-    const t = text.trim();
-    if (!t || loading) return;
-    onSend(t);
+    const trimmedMessage = text.trim();
+    if (!trimmedMessage || loading) return;
+    onSend(trimmedMessage);
     setText("");
   };
 
@@ -32,7 +32,7 @@ export default function Composer({ onSend, loading }) {
         placeholder="Ask anything about finance news, 10-K, or strategies... (Cmd/Ctrl + Enter to send)"
         value={text}
         onChange={(e) => setText(e.target.value)}
-        onKeyDown={onkeydown}
+        onKeyDown={onKeyDown}
       />
       <Button
         onClick={handleSend}

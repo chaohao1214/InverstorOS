@@ -1,11 +1,4 @@
-import {
-  Box,
-  Button,
-  TextField,
-  Typography,
-  CircularProgress,
-  Paper,
-} from "@mui/material";
+import { Paper } from "@mui/material";
 import TopBar from "../components/TopBar";
 import { useState } from "react";
 import MessageList from "../components/MessageList";
@@ -24,13 +17,15 @@ const ChatPage = () => {
     setMessages((m) => [...m, { role: "user", content: prompt }]);
     setLoading(true);
     try {
+      console.log("[send] prompt:", prompt);
       const res = await apiPost("/api/chat", { prompt });
+      console.log("[recv] res:", res);
       const answer = res?.response || "(No response)";
       setMessages((m) => [...m, { role: "assistant", content: answer }]);
     } catch (error) {
       setMessages((m) => [
         ...m,
-        { role: "assistant", content: `Error: ${error.messages}` },
+        { role: "assistant", content: `Error: ${error.message}` },
       ]);
     } finally {
       setLoading(false);

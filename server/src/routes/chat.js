@@ -5,13 +5,13 @@ const router = express.Router();
 
 router.post("/", async (req, res) => {
   const { prompt } = req.body;
-
+  console.log("[/api/chat] prompt:", prompt);
   try {
     const result = await handleChat(prompt);
     res.json({ response: result });
   } catch (error) {
-    console.error("[Chat Error]", err.message);
-    res.status(500).json({ error: "LLM service failed" });
+    console.error("[Chat Error]", error.message);
+    res.status(500).json({ error: error.message || "LLM service failed" });
   }
 });
 
