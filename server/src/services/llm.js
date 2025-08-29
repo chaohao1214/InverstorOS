@@ -96,7 +96,7 @@ async function callOllama(prompt, history = [], options = {}) {
   ];
 
   const body = {
-    model: options.model || "mistral",
+    model: options.model || "gpt-oss:20b",
     messages,
     stream: false,
     options: { temperature: options.temperature ?? 0.7 },
