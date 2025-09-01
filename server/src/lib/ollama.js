@@ -10,79 +10,130 @@ export async function checkOllama() {
 
 /**
  * Stream tokens from Ollama as an async iterator of strings.
- * - Chooses /api/chat vs /api/generate by model prefix.
- * - Normalizes delta from {message.content} or {response} or {delta.content}.
+ * - Endpoint: /api/chat  (we pass messages and stream=true)
+ * - Robust NDJSON parsing with buffering and final flush.
+ * - Token extraction: evt.delta.content → evt.message.content (diff/full) → evt.response
+ *
+ * Params:
+ *   url:        string   full URL, e.g. "http://127.0.0.1:11434/api/chat"
+ *   model:      string
+ *   messages:   Array<{role, content}>
+ *   temperature:number   default 0.7
+ *   signal?:    AbortSignal  (optional; lets caller cancel upstream fetch)
  */
-
 export async function* streamOllama({
+  url,
   model,
   messages,
-  promptFromMessages,
   temperature = 0.7,
+  signal, // optional; safe even if caller doesn't pass
 }) {
-  const isGPTOss = /^gpt-oss/i.test(model);
-  const url = isGPTOss
-    ? `${OLLAMA_HOST}/api/generate`
-    : `${OLLAMA_HOST}/api/chat`;
-
-  const body = isGPTOss
-    ? {
-        model,
-        prompt: promptFromMessages,
-        stream: true,
-        options: { temperature },
-      }
-    : { model, messages, stream: true, options: { temperature } };
-
-  const resp = await fetch(url, {
+  const res = await fetch(url, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/x-ndjson",
-    },
-    body: JSON.stringify(body),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model,
+      messages,
+      stream: true,
+      options: { temperature },
+    }),
+    signal, // pass abort signal if provided
   });
 
-  if (!resp.ok || !resp.body) {
-    const txt = await resp.text().catch(() => "");
-    throw new Error(txt || `Upstream HTTP ${resp.status}`);
-  }
+  if (!res.ok) throw new Error(`Ollama HTTP ${res.status}`);
 
-  const reader = resp.body.getReader();
+  const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buf = "";
+  let emitted = "";
+
+  const processLine = (lineRaw) => {
+    const line = lineRaw.trim();
+    if (!line) return;
+
+    let evt;
+    try {
+      evt = JSON.parse(line);
+    } catch (e) {
+      console.log("[ollama][parse-error]", e?.message, "raw:", lineRaw);
+      return;
+    }
+
+    if (evt.done) {
+      console.log("[ollama] got done:true");
+      return;
+    }
+
+    let tok;
+
+    // 1) Preferred incremental shape
+    if (typeof evt?.delta?.content === "string") {
+      tok = evt.delta.content;
+    }
+    // 2) Some models stream message.content; could be full-so-far or single-token
+    else if (typeof evt?.message?.content === "string") {
+      const full = evt.message.content;
+      const delta =
+        emitted.length > 0 && full.startsWith(emitted)
+          ? full.slice(emitted.length)
+          : full;
+      tok = delta;
+    }
+    // 3) /api/generate style (not used here, but keep compatibility)
+    else if (typeof evt?.response === "string") {
+      tok = evt.response;
+    }
+
+    if (tok !== undefined) {
+      emitted += tok; // keep in sync for future diffs
+      return tok; // DO NOT trim; first token can be a space
+    }
+  };
 
   while (true) {
     const { value, done } = await reader.read();
-    if (done) break;
-    buf += decoder.decode(value, { stream: true });
-    const lines = buf.split("\n");
-    buf = lines.pop() || "";
+    console.log(
+      "[ollama][chunk]",
+      value ? value.length : 0,
+      "bytes",
+      "done:",
+      done
+    );
 
-    for (const raw of lines) {
-      const line = raw.trim();
-      if (!line) continue;
+    if (value) {
+      buf += decoder.decode(value, { stream: true });
 
-      let tok = "";
-      try {
-        const evt = JSON.parse(line);
-        if (evt?.error) throw new Error(String(evt.error));
+      let idx;
+      while ((idx = buf.indexOf("\n")) >= 0) {
+        const raw = buf.slice(0, idx);
+        const line = raw.endsWith("\r") ? raw.slice(0, -1) : raw;
+        buf = buf.slice(idx + 1);
 
-        // Normalize token field; hide any 'thinking'
-        if (evt?.messages?.content) tok = evt.messages.content; // /api/chat
-        else if (typeof evt?.response === "string")
-          tok = evt.response; // /api/generate
-        else if (evt?.delta?.content) tok = evt.delta.content; // delta
+        const tok = processLine(line);
+        if (tok !== undefined) {
+          console.log("[ollama][yield]", JSON.stringify(tok));
+          yield tok;
+        }
+      }
+    }
 
-        if (tok) yield tok;
-        if (evt?.done) return; // upstream finished
-      } catch {}
+    if (done) {
+      const tail = decoder.decode();
+      if (tail) buf += tail;
+
+      if (buf.length > 0) {
+        const tok = processLine(buf);
+        if (tok !== undefined) yield tok;
+        buf = "";
+      }
+      break;
     }
   }
 }
 
 /**
- * Utility to build messages + promptFromMessages from (history + prompt)
+ * Build messages from (history + prompt).
+ * History items should be { role: "user"|"assistant"|"system", content: string }.
  */
 export function buildChatInputs({ history = [], prompt }) {
   const messages = []
@@ -91,6 +142,7 @@ export function buildChatInputs({ history = [], prompt }) {
     .map((m) => ({ role: m.role, content: m.content }));
   messages.push({ role: "user", content: String(prompt ?? "") });
 
+  // Kept for compatibility; not used by streamOllama
   const promptFromMessages =
     messages.map((m) => `${m.role}: ${m.content}`).join("\n") + "\nassistant:";
 

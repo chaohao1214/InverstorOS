@@ -4,6 +4,8 @@ import { sseData, sseDone, sseOpen } from "../lib/sse.js";
 import { buildChatInputs, checkOllama, streamOllama } from "../lib/ollama.js";
 
 const router = express.Router();
+// Configs
+const OLLAMA_URL = process.env.OLLAMA_URL || "http://127.0.0.1:11434/api/chat";
 
 router.post("/", async (req, res) => {
   const { prompt } = req.body;
@@ -18,22 +20,16 @@ router.post("/", async (req, res) => {
 });
 
 // Streaming endpoint (SSE)
-router.post("stream", async (req, res) => {
+router.post("/stream", async (req, res) => {
   const {
     prompt,
-    model = "mistral:instruct",
+    model = "mistral:latest",
     temperature = 0.7,
     history = [],
   } = req.body;
-  console.log("[/api/chat/stream] model:", model);
 
+  // Open SSE channel
   sseOpen(res);
-
-  // Abort on client disconnect
-  let closed = false;
-  req.on("close", () => {
-    closed = true;
-  });
 
   // 1) Health check
   try {
@@ -50,28 +46,36 @@ router.post("stream", async (req, res) => {
   }
 
   // 2) Build inputs
-  const { messages, promptFromMessages } = buildChatInputs({ history, prompt });
+  const { messages } = buildChatInputs({ history, prompt });
 
-  // 3) Stream upstream -> SSE
+  // 3) Stream tokens from upstream -> SSE
+  const ac = new AbortController();
+  res.on("close", () => {
+    console.log("[/api/chat/stream] client closed; abort upstream");
+    ac.abort();
+  });
+
   let seen = false;
   try {
     for await (const token of streamOllama({
+      url: OLLAMA_URL,
       model,
       messages,
-      promptFromMessages,
       temperature,
+      signal: ac.signal,
     })) {
-      if (closed) break;
       seen = true;
       sseData(res, { token });
     }
   } catch (error) {
     sseData(res, { error: error.message || "Upstream error" });
+  } finally {
+    if (!seen)
+      sseData(res, {
+        error: "No tokens yielded (check delta/content parsing)",
+      });
+    sseDone(res);
   }
-
-  // 4) End
-  if (!seen) sseData(res, { error: "Empty response from upstream" });
-  sseDone(res);
 });
 
 export default router;
