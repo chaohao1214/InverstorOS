@@ -28,7 +28,7 @@ export async function streamChat({
     const line = raw.endsWith("\r") ? raw.slice(0, -1) : raw;
     if (!line) return;
     if (line[0] === ":") return; // comment / heartbeat (e.g., ": ping")
-    if (line.startsWith("events:")) {
+    if (line.startsWith("event:")) {
       if (line.includes("done")) onDone?.();
       return;
     }
@@ -54,7 +54,6 @@ export async function streamChat({
 
   while (true) {
     const { value, done } = await reader.read();
-    if (done) break;
 
     if (value) {
       buffer += decoder.decode(value, { stream: true });

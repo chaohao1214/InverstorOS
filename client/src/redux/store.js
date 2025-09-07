@@ -1,7 +1,11 @@
 import { configureStore } from "@reduxjs/toolkit";
-
+import chatReducer from "../feature/chat/chatSlice";
 export const store = configureStore({
   reducer: {
-    // your reducers here
+    chat: chatReducer,
   },
+  middleware: (getDefault) =>
+    getDefault({
+      serializableCheck: false,
+    }),
 });

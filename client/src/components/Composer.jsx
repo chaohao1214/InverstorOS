@@ -12,7 +12,10 @@ export default function Composer({ onSend, onStop, loading }) {
   };
 
   const onKeyDown = (e) => {
-    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleSend();
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
   };
 
   return (
@@ -35,20 +38,17 @@ export default function Composer({ onSend, onStop, loading }) {
         placeholder="Ask anything about finance news, 10-K, or strategies... (Cmd/Ctrl + Enter to send)"
         value={text}
         onChange={(e) => setText(e.target.value)}
-        onKeyDown={(e) =>
-          e.key === "Enter" && (e.metaKey || e.ctrlKey) ? send() : null
-        }
-        inputProps={{ "aria-label": "Message composer" }}
+        onKeyDown={onKeyDown}
       />
       {/* Stop generating */}
-      {/* <Button
+      <Button
         variant="outlined"
         disabled={!loading}
         onClick={onStop}
         sx={{ alignSelf: "stretch", minWidth: 80 }}
       >
         Stop
-      </Button> */}
+      </Button>
       <Button
         onClick={handleSend}
         variant="contained"

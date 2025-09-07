@@ -46,7 +46,7 @@ export default function MessageList({ messages, bottomRef }) {
                   {isUser ? "You" : "Assistant"}
                 </Typography>
                 <Typography variant="body1" sx={{ whiteSpace: "pre-wrap" }}>
-                  {m.content}
+                  {m.content} {m.context}
                 </Typography>
               </Paper>
             </Box>
