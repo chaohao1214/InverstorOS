@@ -1,7 +1,7 @@
 import express from "express";
-import { httpFetch } from "./tools.http";
-import { pdfParsePath } from "./tools.pdf";
-import { vecQuery, vecUpsert } from "./tools.vector";
+import { httpFetch } from "./tools.http.js";
+import { pdfParsePath } from "./tools.pdf.js";
+import { vecQuery, vecUpsert } from "./tools.vector.js";
 
 export const mcpRouter = express.Router();
 

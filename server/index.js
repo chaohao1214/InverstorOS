@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import chatRoutes from "./src/routes/chat.js";
-import { mcpRouter } from "./src/mcp/index.js";
+import { mcpRouter } from "./src/mcp/mcpRouter.js";
 dotenv.config();
 
 const app = express();

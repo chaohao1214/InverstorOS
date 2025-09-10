@@ -1,5 +1,5 @@
 import fs from "node:fs/promises";
-import pdfParse from "pdf-parse";
+
 /**
  * Parse a PDF file from disk and return text.
  * @param {Object} options
@@ -9,6 +9,7 @@ import pdfParse from "pdf-parse";
  */
 
 export async function pdfParsePath({ filePath, splitByPages = true }) {
+  const { default: pdfParse } = await import("pdf-parse");
   const fileBuffer = await fs.readFile(filePath);
   const parsedData = await pdfParse(fileBuffer);
 
