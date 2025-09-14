@@ -9,6 +9,7 @@ const initialState = {
   // Last operations
   lastPdfPath: "",
   lastQueryText: "",
+  focusedSnippetId: null,
 };
 
 const mcpSlice = createSlice({
@@ -42,6 +43,9 @@ const mcpSlice = createSlice({
       }));
       state.queryResults = items;
     },
+    setFocusedSnippetId(state, action) {
+      state.focusedSnippetId = action.payload || null;
+    },
     addContextSnippet(state, action) {
       const item = action.payload;
       const exists = state.contextSnippets.some((x) => x.id === item.id);
@@ -64,6 +68,7 @@ export const {
   setLastPdfPath,
   setLastQueryText,
   setQueryResults,
+  setFocusedSnippetId,
   addContextSnippet,
   removeContextSnippet,
   clearContextSnippets,

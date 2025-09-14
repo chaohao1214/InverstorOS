@@ -1,9 +1,60 @@
-import { Box, Button, CircularProgress, TextField } from "@mui/material";
+import {
+  Box,
+  Button,
+  CircularProgress,
+  IconButton,
+  InputAdornment,
+  TextField,
+} from "@mui/material";
+import { useDispatch } from "react-redux";
 import { useState } from "react";
+import { useRef } from "react";
+import AddIcon from "@mui/icons-material/Add";
+import { parsePdfAndUpsert } from "../feature/mcp/mcpThunks";
 
 export default function Composer({ onSend, onStop, loading }) {
+  const dispatch = useDispatch();
+  const fileInputRef = useRef(null);
   const [text, setText] = useState("");
 
+  const uploadFile = async (file) => {
+    const form = new FormData();
+    form.append("file", file);
+    const resp = await fetch("/upload", { method: "POST", body: form });
+    const json = await resp.json();
+    if (!json?.ok) throw new Error("Upload failed");
+    await dispatch(parsePdfAndUpsert(json.filePath));
+  };
+
+  const onDrop = async (e) => {
+    e.preventDefault();
+    if (loading) return;
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type === "application/pdf") {
+      await uploadFile(file);
+    }
+  };
+
+  const onPaste = async (e) => {
+    const file = [...e.clipboardData.files]?.[0];
+    if (file && file.type === "application/pdf") {
+      e.preventDefault();
+      await uploadFile(file);
+    }
+  };
+
+  // Open file picker for PDF selection
+  const handlePickFile = () => fileInputRef.current?.click();
+
+  // Called when the hidden file input changes
+  const handleFileChange = async (changeEvent) => {
+    const selectedFile = changeEvent.target.files?.[0];
+    if (selectedFile && selectedFile.type === "application/pdf") {
+      await uploadFile(selectedFile);
+      // reset the input so the same file can be selected again if needed
+      changeEvent.target.value = "";
+    }
+  };
   const handleSend = () => {
     const trimmed = text.trim();
     if (!trimmed || loading) return;
@@ -20,6 +71,9 @@ export default function Composer({ onSend, onStop, loading }) {
 
   return (
     <Box
+      onDragOver={(dragEvent) => dragEvent.preventDefault()}
+      onDrop={onDrop}
+      onPaste={onPaste}
       sx={{
         p: { xs: 1.5, sm: 2 },
         borderTop: "1px solid",
@@ -39,7 +93,30 @@ export default function Composer({ onSend, onStop, loading }) {
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={onKeyDown}
+        slotProps={{
+          input: {
+            endAdornment: (
+              <InputAdornment position="end">
+                <IconButton
+                  size="small"
+                  onClick={handlePickFile}
+                  disabled={loading}
+                >
+                  <AddIcon />
+                </IconButton>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="application/pdf"
+                  style={{ display: "none" }}
+                  onChange={handleFileChange}
+                />
+              </InputAdornment>
+            ),
+          },
+        }}
       />
+
       {/* Stop generating */}
       <Button
         variant="outlined"

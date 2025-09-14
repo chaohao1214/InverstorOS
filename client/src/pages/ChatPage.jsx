@@ -6,6 +6,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { sendPromtStream, stopStreaming } from "../feature/chat/chatThunks";
 import { resetConversation } from "../feature/chat/chatSlice";
+import McpPanel from "../components/McpPanel";
 const ChatPage = () => {
   const dispatch = useDispatch();
   const messages = useSelector((state) => state.chat?.messages);
@@ -78,6 +79,7 @@ const ChatPage = () => {
         <Paper elevation={0}>
           <TopBar onClear={onClear} />
           <MessageList messages={messages} bottomRef={bottomRef} />
+          {/* <McpPanel /> */}
           <Composer onSend={onSend} loading={loading} onStop={onStop} />
         </Paper>
       </Container>
