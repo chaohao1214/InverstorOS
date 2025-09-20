@@ -1,6 +1,9 @@
-# InvestorOS Chat
+# 💼 InvestorOS Chat
 
 > 💬 A local-first, streaming AI chat application built with React, Node.js, and Ollama.
+
+InvestorOS Chat enables low-latency, streaming conversations with local LLMs (such as [Ollama](https://ollama.ai)) using **Server-Sent Events (SSE)**.  
+This modular project is built to be developer-friendly, self-hostable, and privacy-preserving.
 
 ---
 
@@ -18,34 +21,32 @@
 ---
 
 ## 🏗️ Architecture
+```txt
 React (frontend)
-|
-| fetch + SSE
-v
+    |
+    | fetch + SSE
+    v
 Express (backend) ---> Ollama API (localhost:11434)
+```
+Frontend: React + MUI for chat UI, streaming display, input form, and abort buttons.
+
+Backend: Node.js + Express server handling /api/chat/stream and communicating with Ollama.
+
+LLM Server: Ollama running locally (e.g., mistral, llama2, or phi models).
 
 
-- **Frontend** (`ChatPage.jsx` + `streamChat.js`)  
-  Handles user input, message rendering, and streaming tokens.  
-- **Backend** (`chat.js`)  
-  Provides `/api/chat` (sync) and `/api/chat/stream` (stream) endpoints.  
-- **Ollama**  
-  Local LLM runner, defaults to `mistral: latest`.
+## ✏️ Getting Started
 
-  ### 1. Prerequisites
-- Node.js ≥ 18
-- Yarn or npm
-- [Ollama](https://ollama.ai) installed locally
+### Prerequisites
 
-### 2. Clone & Install
-```bash
-git clone https://github.com/your-username/investoros-chat.git
-cd investoros-chat
+- **Node.js (v18+)**
+- **Ollama installed locally**  
+  You can install it via:
 
-# Install backend deps
-cd server
-npm install
+  ```bash
+  brew install ollama
 
-# Install frontend deps
-cd ../client
-npm install
+
+## ✍️ Author
+
+This project is primarily developed and maintained by: **Chaohao Zhu** 👋
