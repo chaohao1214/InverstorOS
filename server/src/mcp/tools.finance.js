@@ -1,36 +1,37 @@
-export async function financeQuote({ symbol }) {
-  if (!/^[A-Z.\-]{1,10}$/.test(symbol)) throw new Error("Bad symbol");
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
-    symbol
-  )}?range=1d&interval=1m`;
+import fetch from "node-fetch";
 
-  const ac = new AbortController();
-  const t = setTimeout(() => ac.abort(), 8000);
+export async function financeQuote({ symbol }) {
+  if (!symbol) return { ok: false, error: "symbol_required" };
+
+  const key = process.env.ALPHAVANTAGE_API_KEY;
+  if (!key) {
+    return { ok: false, error: "ALPHAVANTAGE_API_KEY_missing" };
+  }
 
   try {
-    const res = await fetch(url, {
-      signal: ac.signal,
-      headers: {
-        "user-agent":
-          "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome Safari",
-        accept: "application/json,text/plain;q=0.9,*/*;q=0.8",
-      },
-    });
-    if (!res.ok) throw new Error(`upstream ${res.status}`);
-    const json = await res.json();
-    const r = json?.chart?.result?.[0];
-    const meta = r?.meta || {};
+    const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(
+      symbol
+    )}&apikey=${key}`;
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(`http_${r.status}`);
+    const j = await r.json();
+    const q = j?.["Global Quote"] || {};
+    if (!q["05. price"]) {
+      return { ok: false, error: "no_price_found", raw: j };
+    }
     return {
-      symbol,
-      price: meta.regularMarketPrice ?? meta.previousClose,
-      currency: meta.currency || "USD",
-      exchange: meta.exchangeName || "",
-      ts: Date.now(),
+      ok: true,
+      data: {
+        provider: "alphavantage",
+        symbol: q["01. symbol"],
+        price: parseFloat(q["05. price"]),
+        open: parseFloat(q["02. open"]),
+        high: parseFloat(q["03. high"]),
+        low: parseFloat(q["04. low"]),
+        volume: parseInt(q["06. volume"], 10),
+      },
     };
   } catch (e) {
-    // e.name === 'AbortError' -> timeout
-    throw new Error(e.name === "AbortError" ? "timeout" : e.message);
-  } finally {
-    clearTimeout(t);
+    return { ok: false, error: String(e.message || e) };
   }
 }
