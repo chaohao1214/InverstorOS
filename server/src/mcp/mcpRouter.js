@@ -85,7 +85,7 @@ mcpRouter.post("/call", async (req, res) => {
 
     // Optional: timeout guard (lightweight)
     const timeoutMs = spec.timeout_ms ?? 10000;
-    const resp = await Promise.race([
+    const raw = await Promise.race([
       dispatch(tool, args),
       new Promise((_, rej) =>
         setTimeout(
@@ -95,7 +95,18 @@ mcpRouter.post("/call", async (req, res) => {
       ),
     ]);
 
-    return res.json(ok({ tool, result: resp }));
+    let result;
+    if (raw && typeof raw === "object" && "ok" in raw) {
+      if (raw.ok) {
+        result = raw.data;
+      } else {
+        throw { code: "TOOL_ERROR", message: raw.error || "tool failed" };
+      }
+    } else {
+      result = raw;
+    }
+
+    return res.json(ok({ tool, result }));
   } catch (e) {
     const code = e.code || "Internal";
     const message = e.message || String(e);

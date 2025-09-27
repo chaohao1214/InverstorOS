@@ -60,9 +60,9 @@ async function maybeBuildQuoteContext(userText) {
 
   try {
     const quote = await fetchQuote(symbolMatch[1]);
-    return `Market data [${quote.symbol}]: ${quote.price} ${quote.currency} @ ${
-      quote.exchange
-    } (ts=${new Date(quote.ts).toISOString()})`;
+    if (!quote || typeof quote.price !== "number") return null;
+
+    return `Market data [${quote.symbol}]: ${quote.price} (open=${quote.open}, high=${quote.high}, low=${quote.low}, tradingDay=${quote.latestTradingDay})`;
   } catch {
     return null;
   }

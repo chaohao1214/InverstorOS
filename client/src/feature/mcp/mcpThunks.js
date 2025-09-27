@@ -8,16 +8,18 @@ import {
 } from "./mcpSlice";
 
 // post mcp helper
-async function postMcp(name, args) {
-  const resp = await fetch("/mcp", {
+async function postMcp(tool, args) {
+  const resp = await fetch("/mcp/call", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, args }),
+    body: JSON.stringify({ tool, arguments: args }),
   });
   if (!resp.ok) throw new Error(`MCP HTTP ${resp.status}`);
   const json = await resp.json();
   if (!json.ok) throw new Error(json.error || "MCP error");
-  return json.data;
+  console.log("json.data", json.data);
+
+  return json.data?.result;
 }
 
 /**
@@ -43,7 +45,7 @@ export const parsePdfAndUpsert = (filePath) => async (dispatch) => {
     }));
 
     if (documents.length > 0) {
-      await postMcp("vec.upsert", { documents });
+      await postMcp("vector.add", { documents });
     }
     dispatch(mcpSuccess());
     return { pagesCount: documents.length };
@@ -88,9 +90,13 @@ export const querySimilar =
  * @returns {Promise<{symbol:string, price:number, currency:string, exchange:string, ts:number}>}
  */
 
-export async function fetchQuote(symbol) {
+export async function fetchQuote(
+  symbol,
+  { mode = "intraday", interval = "1min" } = {}
+) {
   if (!symbol || typeof symbol !== "string") throw new Error("symbol required");
-  return await postMcp("finance.quote", { symbol });
+  const quote = await postMcp("finance.quote", { symbol, mode, interval });
+  return quote;
 }
 
 /**
