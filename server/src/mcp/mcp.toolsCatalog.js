@@ -103,7 +103,7 @@ export const toolsCatalog = [
       properties: {
         urls: { type: "array", maxItems: 3, items: { type: "string" } },
       },
+      required: ["urls"],
     },
-    required: ["urls"],
   },
 ];
