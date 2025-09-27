@@ -23,6 +23,12 @@ This modular project is built to be developer-friendly, self-hostable, and priva
 
 ---
 
+## Demo
+
+Here is a screenshot of InvestorOS in action:
+
+![InvestorOS Chat Demo](./demo1.png)
+
 ## 🏗️ Architecture
 
 ```txt
